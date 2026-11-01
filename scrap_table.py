@@ -2,13 +2,15 @@ import requests
 import boto3
 import uuid
 import os
+from datetime import datetime
 
 def lambda_handler(event, context):
-    # API interna del IGP para obtener los reportes sísmicos en formato JSON
-    url = "https://ultimosismo.igp.gob.pe/api/ultimo-sismo/ajax/listar"
+    # Obtener el año actual dinámicamente para la URL del IGP
+    año_actual = datetime.now().year
+    url = f"https://ultimosismo.igp.gob.pe/api/ultimo-sismo/ajaxb/{año_actual}"
 
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
 
     try:
@@ -26,7 +28,8 @@ def lambda_handler(event, context):
             'body': f'Error al realizar la petición a la API: {str(e)}'
         }
 
-    # Obtener únicamente los últimos 10 sismos reportados
+    # El API suele devolver los sismos más recientes al inicio de la lista
+    # Tomamos solo los 10 primeros
     sismos = datos[:10] if isinstance(datos, list) else []
 
     if not sismos:
@@ -56,8 +59,8 @@ def lambda_handler(event, context):
         item = {
             'id': str(uuid.uuid4()),
             '#': str(i),
-            'fecha_utc': str(sismo.get('fecha_utc', '')),
-            'hora_utc': str(sismo.get('hora_utc', '')),
+            'fecha': str(sismo.get('fecha_local', sismo.get('fecha_utc', ''))),
+            'hora': str(sismo.get('hora_local', sismo.get('hora_utc', ''))),
             'latitud': str(sismo.get('latitud', '')),
             'longitud': str(sismo.get('longitud', '')),
             'profundidad': str(sismo.get('profundidad', '')),
